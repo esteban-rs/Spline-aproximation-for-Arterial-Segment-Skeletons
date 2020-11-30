@@ -8,15 +8,19 @@ class PGM {
         int rows   = 0;
         int cols   = 0;
         vector<vector<int>>  Image;    // Guarda Imagen Original
-        vector<vector<int>>  Figures;  // Enumero figuras
-        vector<vector< int>> FiguresID;// Id y tamaño
+        vector<vector<int>>  Changes;  // Enumero figuras
         
         void FilteredPGM();            // Filtra pixeles grises
         void GetMaxMin();              // Escribe Max y Min en Figures
 
         // Conjuntos Conexos
-        int CheckNeibors(vector <int> &indexed, int figure_index, queue<vector<int>> &myQueue);
-        void CheckLocalNeibors( int i, int j, int figure_index, queue<vector<int>> &myQueue);
+        int CheckNeibors(int i, int j);
+
+        int A_transitions(int i, int j);
+        int B_Neiborns(int i, int j);
+        int condition1(int i, int j);
+        int condition2(int i, int j);
+
     
     public:
         int convex    = 0;
@@ -27,8 +31,11 @@ class PGM {
         void GetConvexSet();
         void PrintFigures();
 
+        // Skeletonization
+        void Skeletonization();
+
+        // Write Files
         void WritePGM(string filename);   // Escribe imagen original
-        void WritePGM_MM(string filename);// Escribe Max y Min
 };
 
 #endif

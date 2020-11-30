@@ -42,22 +42,6 @@ PGM::PGM(string filename) {
     }
 
     file.close();
-    
-    // Remove gray pixels
-    FilteredPGM();
-}
-
-void PGM::FilteredPGM(){
-    for (int i = 0; i < rows; i++){
-        for (int j = 0; j < cols; j++){
-            if (Image[i][j] < max_scale/2){
-                Image[i][j] = 0;
-            }
-            else {
-                Image[i][j] = max_scale;   
-            }
-        }
-    }
 }
 
 void PGM::WritePGM(string filename) {
@@ -79,195 +63,199 @@ void PGM::WritePGM(string filename) {
     cout << "¡Hurra! Se escribió imagen en " << filename << endl;
 }
 
-void PGM::GetMaxMin(){
-    int MAXID = FiguresID[0][0];
-    int MINID = FiguresID[0][0];
-    int MAX   = FiguresID[0][1];
-    int MIN   = FiguresID[0][1];
-
-    for (int i = 1; i < FiguresID.size(); i++){
-        if (FiguresID[i][1] > MAX){
-            MAXID = FiguresID[i][0];
-            MAX   = FiguresID[i][1];
-        }
-        if (FiguresID[i][1] < MIN){
-            MINID = FiguresID[i][0];
-            MIN   = FiguresID[i][1];         
-        }
+int PGM::A_transitions(int i, int j) {
+    int transitions = 0;
+    /*  
+    Eight Neibors Transtitions 0-> 255
+        j-1___j___j+1
+    i-1 |P9   P2  P3|
+    i   |P8   P1  P4|
+    i+1 |P7___P6__P5|
+    in sequence P2,P3,P4,P5,P6,P7,P8,P9,P2
+    */
+    // P2 TO P3
+    if (Image[i-1][j] == 0 && Image[i-1][j+1] == max_scale) {
+        transitions++;
+    }
+    // P3 TO P4
+    if (Image[i-1][j+1] == 0 && Image[i][j+1] == max_scale) {
+        transitions++;
+    }
+    // P4 TO P5
+    if (Image[i][j+1] == 0 && Image[i+1][j+1] == max_scale) {
+        transitions++;
+    }
+    // P5 TO P6
+    if (Image[i+1][j+1] == 0 && Image[i+1][j] == max_scale) {
+        transitions++;
+    }
+    // P6 TO P7
+    if (Image[i+1][j] == 0 && Image[i+1][j-1] == max_scale) {
+        transitions++;
+    }
+    // P7 TO P8
+    if (Image[i+1][j-1] == 0 && Image[i][j-1] == max_scale) {
+        transitions++;
+    }
+    // P8 TO P9
+    if (Image[i][j-1] == 0 && Image[i-1][j-1] == max_scale) {
+        transitions++;
+    }
+    // P9 TO P2
+    if (Image[i-1][j-1] == 0 && Image[i-1][j] == max_scale) {
+        transitions++;
     }
 
-    for (int i = 0; i <rows; i++){
-        for (int j = 0; j < cols; j++){
-            if (Figures[i][j] == MAXID || Figures[i][j] == MINID){
-                Figures[i][j] = max_scale;
-            }
-            else{
-                Figures[i][j] = 0;
-            }
-        }
+    return transitions;
+}
+
+int PGM::B_Neiborns(int i, int j) {
+    int pixels = 0;
+    /*  Sum of white pixels
+        j-1___j___j+1
+    i-1 |P9   P2  P3|
+    i   |P8   P1  P4|
+    i+1 |P7___P6__P5|
+    in sequence P2,P3,P4,P5,P6,P7,P8,P9
+    */
+    pixels += Image[i-1][j];
+    pixels += Image[i-1][j+1];
+    pixels += Image[i][j+1];
+    pixels += Image[i+1][j+1];
+    pixels += Image[i+1][j];
+    pixels += Image[i+1][j-1];
+    pixels += Image[i][j-1];
+    pixels += Image[i-1][j-1];
+
+    pixels = pixels/max_scale;
+
+    return pixels;
+}
+
+int PGM::condition1(int i, int j) {
+    /*  j-1___j___j+1
+    i-1 |P9   P2  P3|
+    i   |P8   P1  P4|
+    i+1 |P7___P6__P5| */
+
+    int flag = 0;
+    int bn   = 0;
+
+    // Pixel is black
+
+    // 2 <= B(P1) <= 6
+    bn = B_Neiborns(i,j);
+    if (bn >= 2 && bn <=6) {
+        flag ++;
+    }
+    // A(P1) = 1
+    if (A_transitions(i,j) == 1){
+        flag ++;
+    }
+    // at least P2,P4 or P6 is cero
+    if (Image[i-1][j]*Image[i][j+1]*Image[i+1][j] == 0) {
+        flag ++;
+    }
+    // at least P4,P6 or P8 is cero
+    if (Image[i][j+1]*Image[i+1][j]*Image[i][j-1] == 0) {
+        flag ++;
+    }
+
+    if (flag == 4){
+        // Yes
+        return 1;
+    }
+    else {
+        // Nope
+        return 0;
     }
 }
 
-void PGM::WritePGM_MM(string filename) {
-    //GetMaxMin();
-    ofstream file(filename);
-    // Comienza escritura
-    file << "P2"<<endl;
-    file << "# CREATED BY ESTEBANRS" << endl;
-    file << rows << " " << cols << endl;
-    file << max_scale << endl;
+int PGM::condition2(int i, int j) {
+    /*  j-1___j___j+1
+    i-1 |P9   P2  P3|
+    i   |P8   P1  P4|
+    i+1 |P7___P6__P5| */
+    
+    int flag = 0;
+    int bn   = 0;
+    // Pixel is already black
 
-    // Escribe valores
-    for (int i = 0; i < rows; i++){
-        for (int j = 0; j < cols; j++){
-            file << Figures[i][j] << endl;
-        }
+    // 2 <= B(P1) <= 6
+    bn = B_Neiborns(i,j);
+    if (bn >= 2 && bn <=6) {
+        flag ++;
     }
-    file.close();
+    // A(P1) = 1
+    if (A_transitions(i,j) == 1){
+        flag ++;
+    }
+    // at least P2,P4 or P8 is cero
+    if (Image[i-1][j]*Image[i][j+1]*Image[i][j-1] == 0) {
+        flag ++;
+    }
+    // at least P2,P6 or P8 is cero
+    if (Image[i-1][j]*Image[i+1][j]*Image[i][j-1] == 0) {
+        flag ++;
+    }
 
-    cout << "¡Hurra! Se escribió imagen en " << filename << endl;
+    if (flag == 4){
+        // Yes
+        return 1;
+    }
+    else {
+        // Nop
+        return 0;
+    }
+
 }
 
-void PGM::GetConvexSet(){
-    // Asigno memoria a matrix Image
-    Figures.assign(rows, vector<int> (cols,0));
+void PGM::Skeletonization(){
+    // Vector to add to changes
+    vector <int> tmp = {0,0};
+    // Check current changes
+    int _changes = 1;
 
-    queue<vector<int>> MyQueue;// Cola para pixeles de figura
-
-    vector <int> position;     // Posicion Pixel Figura
-    position.assign(2,0);
-
-    vector <int> FindSet;      // Figura Encontrada
-    FindSet.assign(2,0);       // [0] id [1] size
-
-    int figure_id   = 1;
-    int figure_size = 0;
-    int tmp = 0;
-    // Recorro Imagen
-    for (int i = 0; i < rows; i++){
-        for (int j = 0; j < cols; j++){
-            // Reviso si hay figura y no se ha marcado
-            if (Image[i][j] != 0 && Figures[i][j] == 0) {
-                // Agrego punto a cola
-                position[0] = i;
-                position[1] = j;
-                MyQueue.push(position);
-                // Actualizo tamaño
-                figure_size++;
-                // Marco Pixel con indice
-                Figures[i][j] = figure_id;
-            
-                while (!MyQueue.empty()){
-                    position = MyQueue.front();
-                    MyQueue.pop();
-                    figure_size += CheckNeibors(position,figure_id,MyQueue);
+    int contador = 0;
+    while (_changes != 0) {
+        _changes = 0;
+        // First Condition 
+        for (int i = 1; i < rows -1; i++) {
+            for (int j = 1; j < cols -1; j++) {
+                if (Image[i][j] == max_scale) {
+                    if (condition1(i,j) == 1) {
+                        tmp[0] = i;
+                        tmp[1] = j;
+                        Changes.push_back(tmp);
+                        _changes++;
+                    }
                 }
-                // Guardo indice y tamaño
-                FindSet[0] = figure_id;
-                FindSet[1] = figure_size;
-                FiguresID.push_back(FindSet);
-                // Actualizo indice y reinicio tamaño
-                figure_id++; 
-                figure_size = 0;
-            }           
-        } //EndFor j
-    } // EndFor i
-    position.clear();
-    FindSet.clear();
-    convex = Figures.size();
+            }
+        } 
+        // Change colors
+        for (int i = 0; i < Changes.size(); i++) {
+            Image[Changes[i][0]][Changes[i][1]] = 0;
+        }
+        Changes.clear(); 
+        // Second Condition
+        for (int i = 1; i < rows -1; i++) {
+            for (int j = 1; j < cols -1; j++) {
+                if (Image[i][j] == max_scale) {
+                    if (condition2(i,j) == 1) {
+                        tmp[0] = i;
+                        tmp[1] = j;
+                        Changes.push_back(tmp);
+                        _changes++;
+                    }
+                }
+            }
+        }  
+        // Change colors
+        for (int i = 0; i < Changes.size(); i++) {
+            Image[Changes[i][0]][Changes[i][1]] = 0;
+        }
+        Changes.clear(); 
+
+    }
+    
 }
-
-void PGM::PrintFigures(){
-    cout << "** F i g u r e s **" << endl;
-    for (int i = 0; i < FiguresID.size(); i++){
-        cout << "[" << FiguresID[i][0] << "] " << FiguresID[i][1]<< endl;
-    }
-}
-
-void PGM::CheckLocalNeibors( int i, int j, int id, queue<vector<int>> &myQueue){
-    // Vector para agregar elementos a cola
-    vector <int> tmp;
-    tmp.assign(2,0);
-    // Guardo posicion
-    tmp[0] = i;
-    tmp[1] = j;
-    // Agrego a cola
-    myQueue.push(tmp);
-    // Marco pixel
-    Figures[i][j] = id;
-    // Libero posicion temporal
-    tmp.clear();
-}
-
-int PGM::CheckNeibors(vector <int> &indexed, int figure_id, queue<vector<int>> &myQueue){
-    int i = indexed[0];
-    int j = indexed[1];
-    int neibors = 0;
-
-    // Reviso todos los casos
-    if (i >= 0 && j -1 >= 0){
-        if (Image[i][j-1] != 0 && Figures[i][j-1] == 0){
-            CheckLocalNeibors(i,j-1,figure_id,myQueue);
-            // Agrego pixel a tamaño
-            neibors++;
-        }
-    }
-
-    if (i -1 >= 0 && j >= 0){
-        if (Image[i-1][j] != 0 && Figures[i-1][j] == 0){
-            CheckLocalNeibors(i-1,j,figure_id,myQueue);
-            // Agrego pixel a tamaño
-            neibors++;
-        }
-    }
-
-    if (i - 1 >= 0 && j - 1 >= 0){
-        if (Image[i-1][j-1] != 0 && Figures[i-1][j-1] == 0){
-            CheckLocalNeibors(i-1,j-1,figure_id,myQueue);
-            // Agrego pixel a tamaño
-            neibors++;
-        }
-    }
-
-    if (i - 1 >= 0 && j + 1 < cols){
-        if (Image[i -1][j+1] != 0 && Figures[i-1][j+1] == 0){
-            CheckLocalNeibors(i-1,j+1,figure_id,myQueue);
-            // Agrego pixel a tamaño
-            neibors++;
-        }
-    }
-
-    if (i + 1 < rows && j - 1 >= 0){
-        if (Image[i+1][j-1] != 0 && Figures[i+1][j-1] == 0){
-            CheckLocalNeibors(i+1,j-1,figure_id,myQueue);
-            // Agrego pixel a tamaño
-            neibors++;
-        }
-    }
-
-    if (i >= 0 && j + 1 < cols){
-        if (Image[i][j+1] != 0 && Figures[i][j+1] == 0){
-            CheckLocalNeibors(i,j+1,figure_id,myQueue);
-            // Agrego pixel a tamaño
-            neibors++;
-        }
-    }
-
-    if (i + 1 < rows && j >= 0){
-        if (Image[i+1][j] != 0 && Figures[i+1][j] == 0){
-            CheckLocalNeibors(i+1,j,figure_id,myQueue);
-            // Agrego pixel a tamaño
-            neibors++;
-        }
-    }
-
-    if (i + 1 < rows && j + 1 < cols){
-        if (Image[i+1][j+1] != 0 && Figures[i+1][j+1] == 0){
-            CheckLocalNeibors(i+1,j+1,figure_id,myQueue);
-            // Agrego pixel a tamaño
-            neibors++;
-        }
-    }
-    return neibors;
-}
-

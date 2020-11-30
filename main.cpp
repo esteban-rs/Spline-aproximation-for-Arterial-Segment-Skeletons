@@ -12,11 +12,9 @@ int main(int argc, char const *argv[]){
     string name1 = name.substr(8,8);
 
     PGM Image(name);
-
-    Image.GetConvexSet();
-
-    Image.WritePGM_MM("Out/trial.pgm");
-
+    Image.Skeletonization();
+    Image.WritePGM("Out/trial.pgm");
+    
     exit(0);
 
     
