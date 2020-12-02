@@ -4,17 +4,21 @@
 using namespace std;
 
 class PGM {
+    friend class IMG_Processing;
     private:
         int rows   = 0;
         int cols   = 0;
-        vector<vector<int>>  Image;    // Guarda Imagen Original
-        vector<vector<int>>  Changes;  // Enumero figuras
+        vector<vector<int>>  Image;    // Original Image
+        vector<vector<int>>  Figures;  // Segmentation
+        vector<vector< vector <int>>>  Segmentation;
+        vector<vector< int>> FiguresID;// Info (id, size)
         
-        void FilteredPGM();            // Filtra pixeles grises
-        void GetMaxMin();              // Escribe Max y Min en Figures
+        int CheckNeibors(int i, int j);
 
         // Conjuntos Conexos
-        int CheckNeibors(int i, int j);
+        int CheckNeibors(vector <int> &indexed, int figure_index, queue<vector<int>> &myQueue);
+        void CheckLocalNeibors( int i, int j, int figure_index, queue<vector<int>> &myQueue);
+
 
         int A_transitions(int i, int j);
         int B_Neiborns(int i, int j);
@@ -34,8 +38,10 @@ class PGM {
         // Skeletonization
         void Skeletonization();
 
-        // Write Files
-        void WritePGM(string filename);   // Escribe imagen original
+        // Write File
+        void WritePGM(string filename);
+        void WritePGM_Figures(string filename);
+
 };
 
 #endif

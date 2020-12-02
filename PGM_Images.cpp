@@ -63,6 +63,79 @@ void PGM::WritePGM(string filename) {
     cout << "¡Hurra! Se escribió imagen en " << filename << endl;
 }
 
+void PGM::WritePGM_Figures(string filename) {
+    //GetMaxMin();
+    ofstream file(filename);
+    // Comienza escritura
+    file << "P2"<<endl;
+    file << "# CREATED BY ESTEBANRS" << endl;
+    file << cols << " " << rows << endl;
+    file << max_scale << endl;
+
+    // Escribe valores
+    for (int i = 0; i < rows; i++){
+        for (int j = 0; j < cols; j++){
+            file << Figures[i][j] << endl;
+        }
+    }
+    file.close();
+
+    cout << "¡Hurra! Se escribió imagen en " << filename << endl;
+}
+
+int PGM::CheckNeibors(int i, int j){
+    int pixels = 0;
+    // Reviso todos los casos
+    if (j -1 >= 0){
+        if (Image[i][j-1] != 0){
+            pixels++;
+        }
+    }
+    if (i -1 >= 0){
+        if (Image[i-1][j] != 0 ){
+            pixels++;
+        }
+    }
+    if (i - 1 >= 0 && j - 1 >= 0){
+        if (Image[i-1][j-1] != 0){
+            pixels++;
+
+        }
+    }
+    if (i - 1 >= 0 && j + 1 <= cols){
+        if (Image[i -1][j+1] != 0){
+            pixels++;
+
+        }
+    }
+    if (i + 1 <= rows && j - 1 >= 0){
+        if (Image[i+1][j-1] != 0 ){
+            pixels++;
+
+        }
+    }
+    if (j + 1 <= cols){
+        if (Image[i][j+1] != 0){
+            pixels++;
+
+        }
+    }
+    if (i + 1 <= rows){
+        if (Image[i+1][j] != 0){
+                        pixels++;
+
+        }
+    }
+    if (i + 1 <= rows && j + 1 <= cols){
+        if (Image[i+1][j+1] != 0){
+
+            pixels++;
+        }
+    }
+    
+    return pixels;
+}
+
 int PGM::A_transitions(int i, int j) {
     int transitions = 0;
     /*  
@@ -139,13 +212,10 @@ int PGM::condition1(int i, int j) {
     i+1 |P7___P6__P5| */
 
     int flag = 0;
-    int bn   = 0;
-
-    // Pixel is black
 
     // 2 <= B(P1) <= 6
-    bn = B_Neiborns(i,j);
-    if (bn >= 2 && bn <=6) {
+    int bn = B_Neiborns(i,j);
+    if (bn >= 2 && bn <= 6) {
         flag ++;
     }
     // A(P1) = 1
@@ -178,12 +248,10 @@ int PGM::condition2(int i, int j) {
     i+1 |P7___P6__P5| */
     
     int flag = 0;
-    int bn   = 0;
-    // Pixel is already black
 
     // 2 <= B(P1) <= 6
-    bn = B_Neiborns(i,j);
-    if (bn >= 2 && bn <=6) {
+    int bn = B_Neiborns(i,j);
+    if (bn >= 2 && bn <= 6) {
         flag ++;
     }
     // A(P1) = 1
@@ -204,7 +272,7 @@ int PGM::condition2(int i, int j) {
         return 1;
     }
     else {
-        // Nop
+        // Nope
         return 0;
     }
 
@@ -213,49 +281,214 @@ int PGM::condition2(int i, int j) {
 void PGM::Skeletonization(){
     // Vector to add to changes
     vector <int> tmp = {0,0};
-    // Check current changes
-    int _changes = 1;
+    vector<vector<int>>  Changes;
 
-    int contador = 0;
-    while (_changes != 0) {
-        _changes = 0;
+    // Check current changes
+    int changes1 = 1;
+    int changes2 = 1;
+    while (changes1 || changes2){
+        changes1 = changes2 = 0;
         // First Condition 
         for (int i = 1; i < rows -1; i++) {
             for (int j = 1; j < cols -1; j++) {
                 if (Image[i][j] == max_scale) {
                     if (condition1(i,j) == 1) {
+                        changes1++;
                         tmp[0] = i;
                         tmp[1] = j;
                         Changes.push_back(tmp);
-                        _changes++;
                     }
                 }
             }
         } 
-        // Change colors
+
         for (int i = 0; i < Changes.size(); i++) {
             Image[Changes[i][0]][Changes[i][1]] = 0;
         }
-        Changes.clear(); 
+        Changes.clear();
+        
         // Second Condition
         for (int i = 1; i < rows -1; i++) {
             for (int j = 1; j < cols -1; j++) {
                 if (Image[i][j] == max_scale) {
                     if (condition2(i,j) == 1) {
+                        changes2++;
                         tmp[0] = i;
                         tmp[1] = j;
                         Changes.push_back(tmp);
-                        _changes++;
                     }
                 }
             }
-        }  
-        // Change colors
+        }
+
         for (int i = 0; i < Changes.size(); i++) {
             Image[Changes[i][0]][Changes[i][1]] = 0;
         }
-        Changes.clear(); 
-
+        Changes.clear();  
     }
-    
+
+}
+
+void PGM::GetConvexSet() {
+    Figures.assign(rows, vector<int> (cols,0));
+
+    queue<vector<int>> MyQueue;// Cola para pixeles de figura
+
+    vector <int> position;     // Posicion Pixel Figura
+    position.assign(2,0);
+
+    vector <int> FindSet;      // Figura Encontrada
+    FindSet.assign(2,0);       // [0] id [1] size
+
+    int figure_id   = 1;
+    int figure_size = 0;
+    int tmp = 0;
+    // Recorro Imagen
+    for (int i = 0; i < rows; i++){
+        for (int j = 0; j < cols; j++){
+            // Reviso si hay figura y no se ha marcado
+            if (Image[i][j] == max_scale && Figures[i][j] == 0) {
+                // Agrego punto a cola
+                position[0] = i;
+                position[1] = j;
+                MyQueue.push(position);
+                // Actualizo tamaño
+                figure_size++;
+                // Marco Pixel con indice
+                Figures[i][j] = figure_id;
+                
+            
+                while (!MyQueue.empty()){
+                    position = MyQueue.front();
+                    MyQueue.pop();
+                    figure_size += CheckNeibors(position,figure_id,MyQueue);
+                }
+                // Guardo indice y tamaño
+                FindSet[0] = figure_id;
+                FindSet[1] = figure_size;
+                FiguresID.push_back(FindSet);
+                // Actualizo indice y reinicio tamaño
+                figure_id++; 
+                figure_size = 0;
+            }           
+        } //EndFor j
+    } // EndFor i
+    position.clear();
+    FindSet.clear();
+    convex = Figures.size();
+
+
+    // Add pixels to a point list
+    vector <vector <int>> points;
+    vector <int> mypoint = {0,0};
+
+    for (int k = 0; k < FiguresID.size(); k++) {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j< cols; j++) {
+                if (Figures[i][j] == FiguresID[k][0]) {
+                    mypoint[0] = i;
+                    mypoint[1] = j;
+                    points.push_back(mypoint);
+                }
+            }
+        }
+        Segmentation.push_back(points);
+        points.clear();
+    }
+}
+
+void PGM::CheckLocalNeibors( int i, int j, int id, queue<vector<int>> &myQueue){
+    // Vector para agregar elementos a cola
+    vector <int> tmp;
+    tmp.assign(2,0);
+    // Guardo posicion
+    tmp[0] = i;
+    tmp[1] = j;
+    // Agrego a cola
+    myQueue.push(tmp);
+    // Marco pixel
+    Figures[i][j] = id;
+    // Libero posicion temporal
+    tmp.clear();
+}
+
+int PGM::CheckNeibors(vector <int> &indexed, int figure_id, queue<vector<int>> &myQueue){
+    int i = indexed[0];
+    int j = indexed[1];
+    int neibors = 0;
+
+    // Reviso todos los casos
+    if (i >= 0 && j -1 >= 0){
+        if (Image[i][j-1] != 0 && Figures[i][j-1] == 0){
+            CheckLocalNeibors(i,j-1,figure_id,myQueue);
+            // Agrego pixel a tamaño
+            neibors++;
+        }
+    }
+
+    if (i -1 >= 0 && j >= 0){
+        if (Image[i-1][j] != 0 && Figures[i-1][j] == 0){
+            CheckLocalNeibors(i-1,j,figure_id,myQueue);
+            // Agrego pixel a tamaño
+            neibors++;
+        }
+    }
+
+    if (i - 1 >= 0 && j - 1 >= 0){
+        if (Image[i-1][j-1] != 0 && Figures[i-1][j-1] == 0){
+            CheckLocalNeibors(i-1,j-1,figure_id,myQueue);
+            // Agrego pixel a tamaño
+            neibors++;
+        }
+    }
+
+    if (i - 1 >= 0 && j + 1 < cols){
+        if (Image[i -1][j+1] != 0 && Figures[i-1][j+1] == 0){
+            CheckLocalNeibors(i-1,j+1,figure_id,myQueue);
+            // Agrego pixel a tamaño
+            neibors++;
+        }
+    }
+
+    if (i + 1 < rows && j - 1 >= 0){
+        if (Image[i+1][j-1] != 0 && Figures[i+1][j-1] == 0){
+            CheckLocalNeibors(i+1,j-1,figure_id,myQueue);
+            // Agrego pixel a tamaño
+            neibors++;
+        }
+    }
+
+    if (i >= 0 && j + 1 < cols){
+        if (Image[i][j+1] != 0 && Figures[i][j+1] == 0){
+            CheckLocalNeibors(i,j+1,figure_id,myQueue);
+            // Agrego pixel a tamaño
+            neibors++;
+        }
+    }
+
+    if (i + 1 < rows && j >= 0){
+        if (Image[i+1][j] != 0 && Figures[i+1][j] == 0){
+            CheckLocalNeibors(i+1,j,figure_id,myQueue);
+            // Agrego pixel a tamaño
+            neibors++;
+        }
+    }
+
+    if (i + 1 < rows && j + 1 < cols){
+        if (Image[i+1][j+1] != 0 && Figures[i+1][j+1] == 0){
+            CheckLocalNeibors(i+1,j+1,figure_id,myQueue);
+            // Agrego pixel a tamaño
+            neibors++;
+        }
+    }
+    return neibors;
+}
+
+void PGM::PrintFigures(){
+    cout << "** F i g u r e s **" << endl;
+    for (int i = 0; i < FiguresID.size(); i++){
+        cout << "[" << FiguresID[i][0] << "] " << FiguresID[i][1]<< endl;
+        cout << "[" << i << "] " << Segmentation[i].size() << endl;
+    }
+
 }
