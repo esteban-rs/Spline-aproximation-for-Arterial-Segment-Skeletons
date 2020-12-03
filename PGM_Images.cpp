@@ -136,6 +136,126 @@ int PGM::CheckNeibors(int i, int j){
     return pixels;
 }
 
+void PGM::GetConvexSet() {
+    Figures.assign(rows, vector<int> (cols,0));
+
+    queue<vector<int>> MyQueue;// Cola para pixeles de figura
+
+    vector <int> position;     // Posicion Pixel Figura
+    position.assign(2,0);
+
+    vector <int> FindSet;      // Figura Encontrada
+    FindSet.assign(2,0);       // [0] id [1] size
+
+    int figure_id   = 1;
+    int figure_size = 0;
+    int tmp = 0;
+    // Recorro Imagen
+    for (int i = 0; i < rows; i++){
+        for (int j = 0; j < cols; j++){
+            // Reviso si hay figura y no se ha marcado
+            if (Image[i][j] == max_scale && Figures[i][j] == 0) {
+                // Agrego punto a cola
+                position[0] = i;
+                position[1] = j;
+                MyQueue.push(position);
+                // Actualizo tamaño
+                figure_size++;
+                // Marco Pixel con indice
+                Figures[i][j] = figure_id;
+                
+            
+                while (!MyQueue.empty()){
+                    position = MyQueue.front();
+                    MyQueue.pop();
+                    figure_size += CheckNeibors(position,figure_id,MyQueue);
+                }
+                // Guardo indice y tamaño
+                FindSet[0] = figure_id;
+                FindSet[1] = figure_size;
+                FiguresID.push_back(FindSet);
+                // Actualizo indice y reinicio tamaño
+                figure_id++; 
+                figure_size = 0;
+            }           
+        } //EndFor j
+    } // EndFor i
+    position.clear();
+    FindSet.clear();
+    convex = Figures.size();
+    
+
+    // Add pixels to a point list
+    vector <vector <int>> points;
+    vector <int> mypoint = {0,0};
+
+    for (int k = 0; k < FiguresID.size(); k++) {
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j< cols; j++) {
+                if (Figures[i][j] == FiguresID[k][0]) {
+                    mypoint[0] = i;
+                    mypoint[1] = j;
+                    points.push_back(mypoint);
+                }
+            }
+        }
+        Segmentation.push_back(points);
+        points.clear();
+    }
+    
+}
+
+void PGM::Skeletonization(){
+    // Vector to add to changes
+    vector <int> tmp = {0,0};
+    vector<vector<int>>  Changes;
+
+    // Check current changes
+    int changes1 = 1;
+    int changes2 = 1;
+    while (changes1 || changes2){
+        changes1 = changes2 = 0;
+        // First Condition 
+        for (int i = 1; i < rows -1; i++) {
+            for (int j = 1; j < cols -1; j++) {
+                if (Image[i][j] == max_scale) {
+                    if (condition1(i,j) == 1) {
+                        changes1++;
+                        tmp[0] = i;
+                        tmp[1] = j;
+                        Changes.push_back(tmp);
+                    }
+                }
+            }
+        } 
+        // Change color in original image
+        for (int i = 0; i < Changes.size(); i++) {
+            Image[Changes[i][0]][Changes[i][1]] = 0;
+        }
+        Changes.clear();
+        
+        // Second Condition
+        for (int i = 1; i < rows -1; i++) {
+            for (int j = 1; j < cols -1; j++) {
+                if (Image[i][j] == max_scale) {
+                    if (condition2(i,j) == 1) {
+                        changes2++;
+                        tmp[0] = i;
+                        tmp[1] = j;
+                        Changes.push_back(tmp);
+                    }
+                }
+            }
+        }
+        // Change color in original image
+        for (int i = 0; i < Changes.size(); i++) {
+            Image[Changes[i][0]][Changes[i][1]] = 0;
+        }
+        Changes.clear();  
+    }
+
+}
+
 int PGM::A_transitions(int i, int j) {
     int transitions = 0;
     /*  
@@ -278,125 +398,6 @@ int PGM::condition2(int i, int j) {
 
 }
 
-void PGM::Skeletonization(){
-    // Vector to add to changes
-    vector <int> tmp = {0,0};
-    vector<vector<int>>  Changes;
-
-    // Check current changes
-    int changes1 = 1;
-    int changes2 = 1;
-    while (changes1 || changes2){
-        changes1 = changes2 = 0;
-        // First Condition 
-        for (int i = 1; i < rows -1; i++) {
-            for (int j = 1; j < cols -1; j++) {
-                if (Image[i][j] == max_scale) {
-                    if (condition1(i,j) == 1) {
-                        changes1++;
-                        tmp[0] = i;
-                        tmp[1] = j;
-                        Changes.push_back(tmp);
-                    }
-                }
-            }
-        } 
-
-        for (int i = 0; i < Changes.size(); i++) {
-            Image[Changes[i][0]][Changes[i][1]] = 0;
-        }
-        Changes.clear();
-        
-        // Second Condition
-        for (int i = 1; i < rows -1; i++) {
-            for (int j = 1; j < cols -1; j++) {
-                if (Image[i][j] == max_scale) {
-                    if (condition2(i,j) == 1) {
-                        changes2++;
-                        tmp[0] = i;
-                        tmp[1] = j;
-                        Changes.push_back(tmp);
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < Changes.size(); i++) {
-            Image[Changes[i][0]][Changes[i][1]] = 0;
-        }
-        Changes.clear();  
-    }
-
-}
-
-void PGM::GetConvexSet() {
-    Figures.assign(rows, vector<int> (cols,0));
-
-    queue<vector<int>> MyQueue;// Cola para pixeles de figura
-
-    vector <int> position;     // Posicion Pixel Figura
-    position.assign(2,0);
-
-    vector <int> FindSet;      // Figura Encontrada
-    FindSet.assign(2,0);       // [0] id [1] size
-
-    int figure_id   = 1;
-    int figure_size = 0;
-    int tmp = 0;
-    // Recorro Imagen
-    for (int i = 0; i < rows; i++){
-        for (int j = 0; j < cols; j++){
-            // Reviso si hay figura y no se ha marcado
-            if (Image[i][j] == max_scale && Figures[i][j] == 0) {
-                // Agrego punto a cola
-                position[0] = i;
-                position[1] = j;
-                MyQueue.push(position);
-                // Actualizo tamaño
-                figure_size++;
-                // Marco Pixel con indice
-                Figures[i][j] = figure_id;
-                
-            
-                while (!MyQueue.empty()){
-                    position = MyQueue.front();
-                    MyQueue.pop();
-                    figure_size += CheckNeibors(position,figure_id,MyQueue);
-                }
-                // Guardo indice y tamaño
-                FindSet[0] = figure_id;
-                FindSet[1] = figure_size;
-                FiguresID.push_back(FindSet);
-                // Actualizo indice y reinicio tamaño
-                figure_id++; 
-                figure_size = 0;
-            }           
-        } //EndFor j
-    } // EndFor i
-    position.clear();
-    FindSet.clear();
-    convex = Figures.size();
-
-
-    // Add pixels to a point list
-    vector <vector <int>> points;
-    vector <int> mypoint = {0,0};
-
-    for (int k = 0; k < FiguresID.size(); k++) {
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j< cols; j++) {
-                if (Figures[i][j] == FiguresID[k][0]) {
-                    mypoint[0] = i;
-                    mypoint[1] = j;
-                    points.push_back(mypoint);
-                }
-            }
-        }
-        Segmentation.push_back(points);
-        points.clear();
-    }
-}
-
 void PGM::CheckLocalNeibors( int i, int j, int id, queue<vector<int>> &myQueue){
     // Vector para agregar elementos a cola
     vector <int> tmp;
@@ -488,7 +489,7 @@ void PGM::PrintFigures(){
     cout << "** F i g u r e s **" << endl;
     for (int i = 0; i < FiguresID.size(); i++){
         cout << "[" << FiguresID[i][0] << "] " << FiguresID[i][1]<< endl;
-        cout << "[" << i << "] " << Segmentation[i].size() << endl;
+        //cout << "[" << i << "] " << Segmentation[i].size() << endl;
     }
 
 }
