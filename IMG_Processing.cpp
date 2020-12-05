@@ -1,77 +1,6 @@
 #include <bits/stdc++.h>
 #include "IMG_Processing.hpp"
 
-point::point() {
-    x = 0;
-    y = 0;
-}
-
-point::point(int _x, int _y) {
-    x     = _x;
-    y     = _y;
-    label = 0;
-}
-
-point::point(int _x, int _y, int _label) {
-    x     = _x;
-    y     = _y;
-    label = _label;
-}
-
-Line::Line(point _p1, point _p2) {
-    p1 = _p1;
-    p2 = _p2;
-
-    // Check vertical line
-    if (p1.x == p2.x) {
-        m = 0;
-        a = 0;
-        b = 1;
-        c = p1.x;
-    }
-    else {
-        m = (p1.y - p2.y)/(p1.x - p2.x);
-        a = m;
-        b = -1;
-        c = -m*p1.x + p1.y;
-    }
-}
-
-double Line::longitud() {
-    return sqrt((p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y));
-}
-
-double Line::distance(point p) {
-    double distance = abs(a*p.x + b*p.y + c);
-    distance = distance/sqrt(a*a + b*b);
-
-    return distance;
-}
-
-triangle::triangle(point _p1, point _p2, point _p3) {
-    p1 = _p1;
-    p2 = _p2;
-    p3 = _p3;
-
-    /* area with Heron formula */
-    Line a(p1,p2);
-    Line b(p2,p3);
-    Line c(p3,p1);
-
-    /*
-    double a = sqrt((p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y));
-    double b = sqrt((p3.x - p2.x)*(p3.x - p2.x) + (p3.y - p2.y)*(p3.y - p2.y));
-    double c = sqrt((p3.x - p1.x)*(p3.x - p1.x) + (p3.y - p1.y)*(p3.y - p1.y));*/
-
-
-    double s = (a.longitud()+b.longitud()+c.longitud())/2;
-    myarea = sqrt(s * (s - a.longitud()) * (s - b.longitud()) * (s - c.longitud()) );
-
-}
-
-double triangle::area() {
-    return myarea;
-}
 
 void IMG_Processing::get_bifurcations(PGM &myimage) {
     int neiborns = 0;
@@ -93,7 +22,7 @@ void IMG_Processing::get_bifurcations(PGM &myimage) {
                         continue;
                     }
                     bifurcations++;
-                    PointsList.push_back(point(i,j,1));
+                    Bifurcations.push_back(point(i,j,1));
                 }
 
 
@@ -118,6 +47,27 @@ IMG_Processing::IMG_Processing(PGM &myimage) {
     }
 }
 
+void IMG_Processing::SaveSegmentation(PGM &myimage) {
+    Segments.clear();
+    // Add pixels to a point list
+    vector <vector <int>> points;
+    vector <int> mypoint = {0,0};
+
+    for (int k = 0; k < myimage.FiguresID.size(); k++) {
+        for (int i = 0; i < myimage.rows; i++) {
+            for (int j = 0; j< myimage.cols; j++) {
+                if (myimage.Figures[i][j] == myimage.FiguresID[k][0]) {
+                    mypoint[0] = i;
+                    mypoint[1] = j;
+                    points.push_back(mypoint);
+                }
+            }
+        }
+        Segments.push_back(points);
+        points.clear();
+    } 
+}
+
 void IMG_Processing::Segmentation(PGM &myimage) {
     get_bifurcations(myimage);
 
@@ -129,6 +79,9 @@ void IMG_Processing::Segmentation(PGM &myimage) {
 
     // Get convex figures
     myimage.GetConvexSet();
+
+    // Save it in IMG_Processing class
+    SaveSegmentation(myimage);
     
     // Add Bifurcations to segments
     fixsegmentation(myimage);
@@ -141,8 +94,8 @@ void IMG_Processing::Segmentation(PGM &myimage) {
 void IMG_Processing::endpoints(PGM &myimage) {
     /* Add final bifurcation at the end of segment list */
     vector <int> tmp = {0,0};
-    for (int i = 0; i < myimage.Segmentation.size(); i++) {
-       tmp = myimage.Segmentation[i][myimage.Segmentation[i].size() -1 ];
+    for (int i = 0; i < Segments.size(); i++) {
+       tmp = Segments[i][Segments[i].size() -1 ];
        CheckExtendedNeiborns(tmp[0], tmp[1], i, myimage);
     }
 }
@@ -175,31 +128,31 @@ int IMG_Processing::fixgrayneiborns(int i, int j, PGM &myimage) {
 }
 
 void IMG_Processing::fixBifurcations(PGM &myimage) {
-        for (int i = 0; i < PointsList.size(); i++) {
+        for (int i = 0; i < Bifurcations.size(); i++) {
         // Reviso todos los casos
-        if (PointsList[i].y-1 >= 0){
-            ImageCopy[PointsList[i].x][PointsList[i].y-1] = 0;
+        if (Bifurcations[i].y-1 >= 0){
+            ImageCopy[Bifurcations[i].x][Bifurcations[i].y-1] = 0;
         }
-        if (PointsList[i].x -1 >= 0){
-            ImageCopy[PointsList[i].x-1][PointsList[i].y] = 0;
+        if (Bifurcations[i].x -1 >= 0){
+            ImageCopy[Bifurcations[i].x-1][Bifurcations[i].y] = 0;
         }
-        if (PointsList[i].x - 1 >= 0 && PointsList[i].y - 1 >= 0){
-            ImageCopy[PointsList[i].x -1][PointsList[i].y-1] = 0;
+        if (Bifurcations[i].x - 1 >= 0 && Bifurcations[i].y - 1 >= 0){
+            ImageCopy[Bifurcations[i].x -1][Bifurcations[i].y-1] = 0;
         }
-        if (PointsList[i].x-1 >= 0 && PointsList[i].y+1 <= myimage.cols){
-            ImageCopy[PointsList[i].x-1][PointsList[i].y+1] = 0;
+        if (Bifurcations[i].x-1 >= 0 && Bifurcations[i].y+1 <= myimage.cols){
+            ImageCopy[Bifurcations[i].x-1][Bifurcations[i].y+1] = 0;
         }
-        if (PointsList[i].x  + 1 <= myimage.rows && PointsList[i].y-1 >= 0){
-            ImageCopy[PointsList[i].x +1][PointsList[i].y -1] = 0;
+        if (Bifurcations[i].x  + 1 <= myimage.rows && Bifurcations[i].y-1 >= 0){
+            ImageCopy[Bifurcations[i].x +1][Bifurcations[i].y -1] = 0;
         }
-        if (PointsList[i].y + 1 <= myimage.cols){
-            ImageCopy[PointsList[i].x][PointsList[i].y+1] = 0;
+        if (Bifurcations[i].y + 1 <= myimage.cols){
+            ImageCopy[Bifurcations[i].x][Bifurcations[i].y+1] = 0;
         }
-        if (PointsList[i].x +1 <= myimage.rows){
-            ImageCopy[PointsList[i].x +1][PointsList[i].y] = 0;
+        if (Bifurcations[i].x +1 <= myimage.rows){
+            ImageCopy[Bifurcations[i].x +1][Bifurcations[i].y] = 0;
         }
-        if (PointsList[i].x + 1 <= myimage.rows && PointsList[i].y + 1 <= myimage.cols){
-            ImageCopy[PointsList[i].x+1][PointsList[i].y+1] = 0;
+        if (Bifurcations[i].x + 1 <= myimage.rows && Bifurcations[i].y + 1 <= myimage.cols){
+            ImageCopy[Bifurcations[i].x+1][Bifurcations[i].y+1] = 0;
         }
     }
 }
@@ -228,11 +181,11 @@ void IMG_Processing::CheckExtendedNeiborns(int i, int j, int id, PGM &myimage) {
     vector <int> tmp = {0,0};
     for (int x = -2; x <= 2; x++) {
         for (int y = -2; y <= 2; y++) {
-            for (int k = 0; k < PointsList.size(); k++){
-                if (i+x == PointsList[k].x && y+j == PointsList[k].y) {
+            for (int k = 0; k < Bifurcations.size(); k++){
+                if (i+x == Bifurcations[k].x && y+j == Bifurcations[k].y) {
                     tmp[0] = i+x;
                     tmp[1] = j+y;
-                    myimage.Segmentation[id].push_back(tmp);
+                    Segments[id].push_back(tmp);
                 }
             }
         }
@@ -241,41 +194,16 @@ void IMG_Processing::CheckExtendedNeiborns(int i, int j, int id, PGM &myimage) {
 }
 
 void IMG_Processing::RamerDouglasPeucker(PGM &myimage, double epsilon) {
-    vector <vector <vector <int>>> splines;
+
+    Simplification.clear();
     vector <vector <int>> out;
 
-    for (int i = 0; i < myimage.Segmentation.size(); i++) {
+    for (int i = 0; i < Segments.size(); i++) {
         vector <vector <int>> out;
-        DouglasPeucker(myimage.Segmentation[i],epsilon, out);
-        splines.push_back(out);
+        DouglasPeucker(Segments[i],epsilon, out);
+        Simplification.push_back(out);
         out.clear();
     }
-
-    // draw lineal splines
-    for (int i = 0; i < splines.size(); i++) {
-        lines(splines[i], myimage);
-    }
-    
-}
-
-double IMG_Processing::perpendiculardistance(vector <int> &p, vector<int> &star, vector<int> &end) { 
-    double dx = end[0] - star[0];
-    double dy = end[1] - star[1];
-
-    // Get distance and normalize
-    double d = sqrt(dx*dx + dy*dy);
-    if (d > 0) {
-        dx = dx/d;
-        dy = dy/d;
-    }
-
-    // Get proyectation
-    double pvdot = dx*(p[0] - star[0]) + dy *(p[1] - star[1]);
-
-    double ax = p[0] - star[0] - pvdot * dx;
-    double ay = p[1] - star[1] - pvdot * dy;
-
-    return sqrt(ax*ax + ay*ay);
 }
 
 void IMG_Processing::DouglasPeucker(vector <vector <int>> &segment, double epsilon, vector <vector<int>> &out) {
@@ -423,7 +351,7 @@ void IMG_Processing::SortSegementation(PGM &myimage) {
     point p(0,0,-1);
 
     // find first bifurcation
-    for (int i = 0; i < myimage.Segmentation.size(); i++) {
+    for (int i = 0; i < Segments.size(); i++) {
         // Find Bifurtation
         p = find_extreme(i,myimage);
         tmp[0] = p.x;
@@ -447,20 +375,20 @@ void IMG_Processing::SortSegementation(PGM &myimage) {
         sorted_segment.clear();
     }
     // Set space for new order
-    myimage.Segmentation.clear();
+    Segments.clear();
     // copy sorted elements
     for (int i = 0; i < sorted_segments.size(); i++) {
-        myimage.Segmentation.push_back(sorted_segments[i]);
+        Segments.push_back(sorted_segments[i]);
     }
 }
 
 point IMG_Processing::find_extreme( int i, PGM &image) {
     vector <int> tmp = {0,0};
     point p(0,0,-1);
-    for (int j = 0; j < image.Segmentation[i].size(); j++) {
-        tmp = image.Segmentation[i][j];
-        for (int k = 0; k < PointsList.size(); k++) {
-            if (tmp[0] == PointsList[k].x && tmp[1] == PointsList[k].y ){
+    for (int j = 0; j < Segments[i].size(); j++) {
+        tmp = Segments[i][j];
+        for (int k = 0; k < Bifurcations.size(); k++) {
+            if (tmp[0] == Bifurcations[k].x && tmp[1] == Bifurcations[k].y ){
                 p.x = tmp[0];
                 p.y = tmp[1];
                 p.label = 1;
@@ -610,17 +538,12 @@ void IMG_Processing::Visvaligram_local(vector <vector<int>> &segment, vector <ve
 }
 
 void IMG_Processing::Visvaligram(PGM &myimage, double epsilon) {
-    vector <vector <vector <int>>> splines;
-    vector <vector <int>> local;
-    for (int i = 0; i < myimage.Segmentation.size(); i++) {
-        Visvaligram_local(myimage.Segmentation[i], local, epsilon);
-        splines.push_back(local);
-        local.clear();
-    }
+    Simplification.clear();
 
-    vector <int> tmp = {0,0};
-    // draw lineal splines
-    for (int i = 0; i < splines.size(); i++) {
-        lines(splines[i],myimage);
+    vector <vector <int>> local;
+    for (int i = 0; i < Segments.size(); i++) {
+        Visvaligram_local(Segments[i], local, epsilon);
+        Simplification.push_back(local);
+        local.clear();
     }
 }

@@ -2,6 +2,7 @@
 #include <time.h>
 #include "PGM_Images.hpp"
 #include "IMG_Processing.hpp"
+#include "Splines.hpp"
 
 int main(int argc, char const *argv[]){
     if (argc == 1 || argc > 2){
@@ -22,12 +23,17 @@ int main(int argc, char const *argv[]){
     IMG_Processing processing(Image);
     processing.Segmentation(Image);
 
-    //processing.RamerDouglasPeucker(Image, 10);
+    processing.RamerDouglasPeucker(Image, 10);
+    //processing.Visvaligram(Image, 50);
 
-    processing.Visvaligram(Image, 50);
+    Spline myspline(Image);
+    myspline.LinealSpline(processing);
+    myspline.WriteSpline("Out/Spline_"+ name1);
+    myspline.Hausdorff_Distance(processing);
+    // Image.PrintFigures();
 
-    Image.PrintFigures();
     Image.WritePGM("Out/" + name1);
+
 
     return 0;
 }

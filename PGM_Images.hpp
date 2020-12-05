@@ -5,13 +5,13 @@ using namespace std;
 
 class PGM {
     friend class IMG_Processing;
+    friend class Spline;
     private:
         int rows   = 0;
         int cols   = 0;
 
         vector<vector<int>>  Image;                  // Original Image
         vector<vector<int>>  Figures;                // Conected Sets
-        vector<vector< vector <int>>>  Segmentation; // Segments
         vector<vector< int>> FiguresID;              // Info (id, size)
         
 

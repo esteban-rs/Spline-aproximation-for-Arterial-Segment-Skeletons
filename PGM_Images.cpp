@@ -183,26 +183,6 @@ void PGM::GetConvexSet() {
     position.clear();
     FindSet.clear();
     convex = Figures.size();
-    
-
-    // Add pixels to a point list
-    vector <vector <int>> points;
-    vector <int> mypoint = {0,0};
-
-    for (int k = 0; k < FiguresID.size(); k++) {
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j< cols; j++) {
-                if (Figures[i][j] == FiguresID[k][0]) {
-                    mypoint[0] = i;
-                    mypoint[1] = j;
-                    points.push_back(mypoint);
-                }
-            }
-        }
-        Segmentation.push_back(points);
-        points.clear();
-    }
-    
 }
 
 void PGM::Skeletonization(){
@@ -489,7 +469,6 @@ void PGM::PrintFigures(){
     cout << "** F i g u r e s **" << endl;
     for (int i = 0; i < FiguresID.size(); i++){
         cout << "[" << FiguresID[i][0] << "] " << FiguresID[i][1]<< endl;
-        //cout << "[" << i << "] " << Segmentation[i].size() << endl;
     }
 
 }
